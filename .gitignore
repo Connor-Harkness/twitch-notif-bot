@@ -1,3 +1,4 @@
 config.py
 bot-env/
 __pycache__
+*.ipynb
