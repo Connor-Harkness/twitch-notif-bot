@@ -34,7 +34,6 @@ class Dev(commands.Cog):
         with open("./data.json", "w") as f:
             self.new_data = {}
             self.new_data["notifications"] = list(set(self.data))
-            print(self.new_data)
             f.write(json.dumps(self.new_data))
 
     @commands.group(name="notifications")
