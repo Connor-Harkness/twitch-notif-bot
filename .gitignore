@@ -1,4 +1,5 @@
 config.py
-bot-env/
+env/
+test.py
 __pycache__
 *.ipynb

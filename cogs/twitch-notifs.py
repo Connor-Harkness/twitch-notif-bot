@@ -1,6 +1,10 @@
 import re
-
-from discord.ext import commands
+import twitch
+import config
+from datetime import datetime, timedelta
+import discord
+import time
+from discord.ext import commands, tasks
 import json
 
 
@@ -10,6 +14,16 @@ class Dev(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.load_json_storage()
+        self.helix = twitch.Helix(config.client_id, config.client_secret, use_cache=True,
+                                  cache_duration=timedelta(minutes=10))
+        time.sleep(10)
+        self.check_if_live.start()
+        self.posted = {}
+        for streamer in self.data:
+            self.posted[streamer] = None
+
+    def cog_unload(self):
+        self.check_if_live.cancel()
 
     def load_json_storage(self):
         with open("./data.json") as f:
@@ -53,6 +67,60 @@ class Dev(commands.Cog):
     async def list(self, ctx):
         """Lists all the channels currently in the watchlist"""
         await ctx.send(f"The current watchlist is: {self.data}")
+
+    @commands.command()
+    async def test(self, ctx, strmr):
+        await ctx.send(strmr.data)
+        # await ctx.send(f"searched for: {strmr}\n got: {self.helix.user(strmr).data}")
+
+    @tasks.loop(seconds=60)
+    async def check_if_live(self):
+
+        for streamer in self.data:
+
+            user = self.helix.user(streamer).data
+            try:
+                stream = self.helix.stream(user_id=user["id"]).data
+
+                if stream["type"] == "live":
+
+                    if self.posted[streamer] == None:
+                        emb = await self.sendemb(user, stream)
+                        self.posted[streamer] = emb.id
+                else:
+                    self.posted[streamer] = None
+
+            except Exception as e:
+                print(f"{e}")
+
+    async def sendemb(self, user, stream):
+        # {
+        #     "type": "rich",
+        #     "title": `streamer is live!`,
+        #     "description": `stream description`,
+        #     "color": 0x00FFFF,
+        #     "image": {
+        #         "url": `stream preview`,
+        #     "thumbnail": {
+        #         "url": `streamer profile pic`,
+        #     },
+        #     "url": `stream url`
+
+        e = discord.Embed()
+        e.url = f"https://twitch.tv/{user['login']} "
+        e.title = f"{user['display_name']} is LIVE :red_circle: NOW!"
+        e.description = f"**{stream['title']}**\n{user['description']}"
+        e.color = 0x00FFFF
+        new_url = stream["thumbnail_url"]
+        width = 1024
+        height = 768
+        e.set_image(url=new_url.format(width=1024,
+                                       height=768))
+        e.set_thumbnail(url=user["profile_image_url"])
+
+        c = await self.bot.fetch_channel(config.notification_channel)
+        emb = await c.send(embed=e)
+        return emb
 
 
 def setup(bot):
