@@ -1,15 +1,15 @@
-import re
-import twitch
-import config
-from datetime import datetime, timedelta
-import discord
-import time
-from discord.ext import commands, tasks
 import json
+import time
+from datetime import timedelta
+
+import config
+import discord
+import twitch
+from discord.ext import commands, tasks
 
 
-class Dev(commands.Cog):
-    """Development stuff"""
+class TwitchNotifs(commands.Cog):
+    """Twitch livestream notifications"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -43,7 +43,7 @@ class Dev(commands.Cog):
     async def add(self, ctx, streamer_username: str, color: str = None):
         """Adds a streamer to the automatic notifications."""
         try:
-            self.data[f"{streamer_username}"] = {"color": color, "roles": None}
+            self.data[streamer_username] = {"color": color, "roles": None}
             await self.save_data()
             await ctx.send(f"Successfully added {streamer_username} to the watchlist, and saved the data file")
         except Exception as e:
@@ -76,22 +76,16 @@ class Dev(commands.Cog):
 
     @tasks.loop(seconds=60)
     async def check_if_live(self):
-
         for streamer in self.data:
-
             try:
                 user = self.helix.user(streamer).data
-
                 stream = self.helix.stream(user_id=user["id"]).data
-
                 if stream["type"] == "live":
-
                     if self.posted[streamer] == None:
                         emb = await self.sendemb(user, stream)
                         self.posted[streamer] = emb.id
                 else:
                     self.posted[streamer] = None
-
             except Exception as e:
                 print(f"{e}")
 
@@ -126,4 +120,4 @@ class Dev(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Dev(bot))
+    bot.add_cog(TwitchNotifs(bot))
