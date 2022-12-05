@@ -40,10 +40,10 @@ class TwitchNotifs(commands.Cog):
             await (ctx.send('Invaid sub-command passed'))
 
     @notifications.command()
-    async def add(self, ctx, streamer_username: str, color: str = None):
+    async def add(self, ctx, streamer_username: str, colour: str = None):
         """Adds a streamer to the automatic notifications."""
         try:
-            self.data[streamer_username] = {"color": color, "roles": None}
+            self.data[streamer_username] = {"color": colour, "roles": None}
             await self.save_data()
             await ctx.send(f"Successfully added {streamer_username} to the watchlist, and saved the data file")
         except Exception as e:
@@ -107,7 +107,7 @@ class TwitchNotifs(commands.Cog):
         e.title = f"{user['display_name']} is LIVE :red_circle: NOW!"
         e.description = f"**{stream['title']}**\n{user['description']}"
         if self.data[user["login"]]["color"] != None:
-            e.colour = int(self.data[user["login"]["color"]], 16)
+            e.colour = int(self.data[user["login"]]["color"], 16)
         e.colour = 0x00FFFF
         new_url = stream["thumbnail_url"]
         e.set_image(url=new_url.format(width=1024,
