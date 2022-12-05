@@ -4,3 +4,4 @@ env/
 test.py
 __pycache__
 *.ipynb
+data.json
