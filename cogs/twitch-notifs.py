@@ -1,15 +1,15 @@
-import re
-import twitch
-import config
-from datetime import datetime, timedelta
-import discord
-import time
-from discord.ext import commands, tasks
 import json
+import time
+from datetime import timedelta
+
+import config
+import discord
+import twitch
+from discord.ext import commands, tasks
 
 
-class Dev(commands.Cog):
-    """Development stuff"""
+class TwitchNotifs(commands.Cog):
+    """Twitch livestream notifications"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -28,13 +28,10 @@ class Dev(commands.Cog):
     def load_json_storage(self):
         with open("./data.json") as f:
             self.data = json.loads(f.read())
-            self.data = self.data["notifications"]
 
     async def save_data(self):
         with open("./data.json", "w") as f:
-            self.new_data = {}
-            self.new_data["notifications"] = list(set(self.data))
-            f.write(json.dumps(self.new_data))
+            f.write(json.dumps(self.data))
 
     @commands.group(name="notifications")
     async def notifications(self, ctx):
@@ -43,14 +40,24 @@ class Dev(commands.Cog):
             await (ctx.send('Invaid sub-command passed'))
 
     @notifications.command()
-    async def add(self, ctx, streamer_username: str):
+    async def add(self, ctx, streamer_username: str, colour: str = None):
         """Adds a streamer to the automatic notifications."""
         try:
-            self.data.append(streamer_username)
+            self.data[streamer_username] = {"color": colour, "roles": None}
             await self.save_data()
             await ctx.send(f"Successfully added {streamer_username} to the watchlist, and saved the data file")
         except Exception as e:
             await ctx.send(f"Failed to add {streamer_username} to the watchlist because of \n{e}")
+
+    @notifications.command()
+    async def edit(self, ctx, streamer_username: str, key, value=None):
+        """Edits the settings for a user in the watchlist
+        USAGE: !notifications edit <streamer: connor_harkness> <key: colour> <value: 0x00FFFF>"""
+        try:
+            self.data[streamer_username][key] = value
+            await self.save_data()
+        except Exception as e:
+            await ctx.send(f"Failed to edit: {streamer_username} \n {e}")
 
     @notifications.command()
     async def remove(self, ctx, streamer_username: str):
@@ -67,28 +74,18 @@ class Dev(commands.Cog):
         """Lists all the channels currently in the watchlist"""
         await ctx.send(f"The current watchlist is: {self.data}")
 
-    @commands.command()
-    async def test(self, ctx, strmr):
-        await ctx.send(strmr.data)
-        # await ctx.send(f"searched for: {strmr}\n got: {self.helix.user(strmr).data}")
-
     @tasks.loop(seconds=60)
     async def check_if_live(self):
-
         for streamer in self.data:
-
-            user = self.helix.user(streamer).data
             try:
+                user = self.helix.user(streamer).data
                 stream = self.helix.stream(user_id=user["id"]).data
-
                 if stream["type"] == "live":
-
                     if self.posted[streamer] == None:
                         emb = await self.sendemb(user, stream)
                         self.posted[streamer] = emb.id
                 else:
                     self.posted[streamer] = None
-
             except Exception as e:
                 print(f"{e}")
 
@@ -109,10 +106,10 @@ class Dev(commands.Cog):
         e.url = f"https://twitch.tv/{user['login']} "
         e.title = f"{user['display_name']} is LIVE :red_circle: NOW!"
         e.description = f"**{stream['title']}**\n{user['description']}"
-        e.color = 0x00FFFF
+        if self.data[user["login"]]["color"] != None:
+            e.colour = int(self.data[user["login"]]["color"], 16)
+        e.colour = 0x00FFFF
         new_url = stream["thumbnail_url"]
-        width = 1024
-        height = 768
         e.set_image(url=new_url.format(width=1024,
                                        height=768))
         e.set_thumbnail(url=user["profile_image_url"])
@@ -123,4 +120,4 @@ class Dev(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Dev(bot))
+    bot.add_cog(TwitchNotifs(bot))
