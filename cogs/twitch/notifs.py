@@ -2,10 +2,11 @@ import json
 import time
 from datetime import timedelta
 
-import config
 import discord
 import twitch
 from discord.ext import commands, tasks
+
+import config
 
 
 class TwitchNotifs(commands.Cog):
@@ -14,9 +15,9 @@ class TwitchNotifs(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.load_json_storage()
-        self.helix = twitch.Helix(config.client_id, config.client_secret, use_cache=True,
-                                  cache_duration=timedelta(minutes=10))
-        time.sleep(10)
+        self.api = bot.get_cog("TwitchApi")
+        self.helix= self.api.helix
+        # time.sleep(10)
         self.check_if_live.start()
         self.posted = {}
         for streamer in self.data:
@@ -40,7 +41,7 @@ class TwitchNotifs(commands.Cog):
             await (ctx.send('Invaid sub-command passed'))
 
     @notifications.command()
-    async def add(self, ctx, streamer_username: str, colour: str = None):
+    async def add(self, ctx, streamer_username: str, colour = None):
         """Adds a streamer to the automatic notifications."""
         try:
             self.data[streamer_username] = {"color": colour, "roles": None}
@@ -114,7 +115,7 @@ class TwitchNotifs(commands.Cog):
                                        height=768))
         e.set_thumbnail(url=user["profile_image_url"])
 
-        c = await self.bot.fetch_channel(config.notification_channel)
+        c = await self.bot.fetch_channel(config.discord_notification_channel)
         emb = await c.send(embed=e)
         return emb
 

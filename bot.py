@@ -19,14 +19,14 @@ intents.message_content = True
 class Twitch_Notif_Bot(commands.Bot):
     def __init__(self):
         super().__init__(
-            command_prefix=commands.when_mentioned_or(config.prefix),
+            command_prefix=commands.when_mentioned_or(config.bot_prefix),
             description=description,
             intents=intents,
         )
         self.load_cogs()
 
     def load_cogs(self):
-        for cog in config.base_cogs:
+        for cog in config.bot_base_cogs:
             try:
                 self.load_extension(cog)
             except Exception as e:
@@ -73,7 +73,7 @@ class Twitch_Notif_Bot(commands.Bot):
         return config
 
     def run(self):
-        super().run(config.token)
+        super().run(config.discord_token)
 
 
 if __name__ == '__main__':
